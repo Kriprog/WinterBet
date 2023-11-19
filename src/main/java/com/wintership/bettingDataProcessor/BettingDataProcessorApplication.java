@@ -11,7 +11,7 @@ public class BettingDataProcessorApplication {
 
         String matchDataFilePath = "src/main/resources/match_data.txt";
         String playerDataFilePath = "src/main/resources/player_data.txt";
-        String resultsFilePath = "src/main/java/com/wintership/bettingDataProcessor/results.txt";
+        String resultFilePath = "src/main/java/com/wintership/bettingDataProcessor/result.txt";
 
 
         DataFileReader matchDataReader = new DataFileReader(matchDataFilePath);
@@ -22,7 +22,7 @@ public class BettingDataProcessorApplication {
 
         playerDataReader.readAndProcessData();
 
-        playerDataReader.writeResultsToFile(resultsFilePath);
+        playerDataReader.writeResultToFile(resultFilePath);
 
     }
 }

@@ -28,7 +28,6 @@ public class PlayerAction {
         this.sideBetOn = sideBetOn;
         this.matches = matches;
         this.playerId = playerId;
-        this.line = line;
     }
 
 }

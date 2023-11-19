@@ -21,10 +21,10 @@ public class Player {
     private long balance;
     private List<PlayerAction> actions;
     private Set<PlayerAction> processedActions = new HashSet<>();
+    private long netAmount;
     private int wonMatches = 0;
     private int totalMatches = 0;
     private boolean firstIllegalOperationDetected = false;
-    @Getter
     private PlayerAction firstIllegalOperation;
 
 
@@ -36,13 +36,16 @@ public class Player {
         this.playerId = playerId;
         this.balance = 0;
         this.actions = new ArrayList<>();
+        this.netAmount = 0;
     }
 
     public void addAction(PlayerAction action) {
         actions.add(action);
         updateBalance(action);
     }
-
+    public void updateNetAmount(long amount) {
+        this.netAmount += amount;
+    }
     public void updateBalance(long amount) {
         balance += amount;
     }
