@@ -1,4 +1,4 @@
-package com.wintership.bettingDataProcessor;
+package com.winternship.bettingDataProcessor;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
-import static com.wintership.bettingDataProcessor.DataFileReader.logger;
+import static com.winternship.bettingDataProcessor.DataFileReader.logger;
 
 @Getter
 @Setter

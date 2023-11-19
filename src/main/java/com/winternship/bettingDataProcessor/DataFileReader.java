@@ -1,4 +1,4 @@
-package com.wintership.bettingDataProcessor;
+package com.winternship.bettingDataProcessor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +8,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -218,11 +220,15 @@ public class DataFileReader {
     }
 
     private void legitimatePlayersToFile(BufferedWriter writer) throws IOException {
+        DecimalFormat decimalFormat = new DecimalFormat("#,##0.00", new DecimalFormatSymbols(Locale.GERMAN));
 
-        players.stream().filter(player -> !player.hasFirstIllegalOperation()).sorted(Comparator.comparing(Player::getPlayerId)).forEach(player -> {
+        players.stream()
+                .filter(player -> !player.hasFirstIllegalOperation())
+                .sorted(Comparator.comparing(Player::getPlayerId))
+                .forEach(player -> {
             try {
                 BigDecimal winRate = player.getWinRate();
-                writer.write(player.getPlayerId() + " " + player.getBalance() + " " + winRate.setScale(2, RoundingMode.HALF_UP));
+                writer.write(player.getPlayerId() + " " + player.getBalance() + " " + decimalFormat.format(winRate.setScale(2, RoundingMode.HALF_UP)));
                 writer.newLine();
             } catch (IOException e) {
                 logger.error("An error occurred:", e);
@@ -238,7 +244,6 @@ public class DataFileReader {
                 .forEach(player -> {
                     try {
                         PlayerAction firstIllegalOperation = player.getFirstIllegalOperation();
-
                         writer.write(player.getPlayerId() + " " + firstIllegalOperation.getAction() + " " + firstIllegalOperation.getMatchId() + " " + firstIllegalOperation.getCoinsAmount() + " " + firstIllegalOperation.getSideBetOn());
                         writer.newLine();
                     } catch (IOException e) {

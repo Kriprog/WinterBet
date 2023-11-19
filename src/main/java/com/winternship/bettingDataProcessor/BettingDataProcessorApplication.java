@@ -1,4 +1,4 @@
-package com.wintership.bettingDataProcessor;
+package com.winternship.bettingDataProcessor;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,7 +11,7 @@ public class BettingDataProcessorApplication {
 
         String matchDataFilePath = "src/main/resources/match_data.txt";
         String playerDataFilePath = "src/main/resources/player_data.txt";
-        String resultFilePath = "src/main/java/com/wintership/bettingDataProcessor/result.txt";
+        String resultFilePath = "src/main/java/com/winternship/bettingDataProcessor/result.txt";
 
 
         DataFileReader matchDataReader = new DataFileReader(matchDataFilePath);
