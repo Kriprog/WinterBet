@@ -6,22 +6,24 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class BettingDataProcessorApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(BettingDataProcessorApplication.class, args);
+    public static void main(String[] args) {
+        SpringApplication.run(BettingDataProcessorApplication.class, args);
 
-		String matchDataFilePath = "src/main/resources/match_data.txt";
-		String playerDataFilePath = "src/main/resources/player_data.txt";
-
-		DataFileReader matchDataReader = new DataFileReader(matchDataFilePath);
-		DataFileReader playerDataReader = new DataFileReader(playerDataFilePath);
+        String matchDataFilePath = "src/main/resources/match_data.txt";
+        String playerDataFilePath = "src/main/resources/player_data.txt";
+        String resultsFilePath = "src/main/java/com/wintership/bettingDataProcessor/results.txt";
 
 
-		matchDataReader.readAndProcessMatchData();
+        DataFileReader matchDataReader = new DataFileReader(matchDataFilePath);
+        DataFileReader playerDataReader = new DataFileReader(playerDataFilePath);
 
-		playerDataReader.readAndProcessData();
 
-		playerDataReader.identifyAndLogPlayerBalances();
+        matchDataReader.readAndProcessMatchData();
 
-	}
+        playerDataReader.readAndProcessData();
+
+        playerDataReader.writeResultsToFile(resultsFilePath);
+
+    }
 }
 

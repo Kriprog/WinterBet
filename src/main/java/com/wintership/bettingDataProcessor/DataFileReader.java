@@ -1,22 +1,24 @@
 package com.wintership.bettingDataProcessor;
 
 import lombok.Getter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Stream;
 
 public class DataFileReader {
-
+    static final Logger logger = LoggerFactory.getLogger(DataFileReader.class);
     private final String filePath;
     private final List<Player> players;
     private static final List<Match> matches = new ArrayList<>();
     @Getter
     private int casinoBalance = 0;
-
     private Player currentPlayer;
 
     public DataFileReader(String filePath) {
@@ -45,7 +47,7 @@ public class DataFileReader {
                 processLine(currentPlayer, line);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("An error occurred:", e);
         }
 
         // After reading and processing the data, iterate over the list
@@ -53,13 +55,13 @@ public class DataFileReader {
         for (Player player : players) {
             identifyFirstIllegalOperation(player);
         }
-        System.out.println("Number of players: " + players.size());
     }
 
     private void processLine(Player currentPlayer, String line) {
         if (currentPlayer.hasFirstIllegalOperation()) {
             return;
         }
+
         String[] data = line.split(",");
 
         if (data.length < 5 && !("DEPOSIT".equals(data[1]) || "WITHDRAW".equals(data[1]))) {
@@ -73,26 +75,23 @@ public class DataFileReader {
             int coinsAmount = Integer.parseInt(data[3]);
             String sideBetOn = null;
 
-
             if ("WITHDRAW".equals(actionType) && currentPlayer.getBalance() < coinsAmount) {
-                PlayerAction illegalWithdrawal = new PlayerAction("ILLEGAL_WITHDRAW", null, coinsAmount, null, null, currentPlayer.getPlayerId());
+                PlayerAction illegalWithdrawal = new PlayerAction("WITHDRAW", null, coinsAmount, null, null, currentPlayer.getPlayerId());
                 currentPlayer.setFirstIllegalOperation(illegalWithdrawal);
-                System.out.println("First illegal operation for Player " + currentPlayer.getPlayerId() + ": " + line);
-                return;  // Stop further processing for this player
+                return;
             }
 
-// If it is a bet, check if the balance is sufficient
-            if ("BET".equals(actionType) && currentPlayer.getBalance() < coinsAmount) {
-                PlayerAction illegalBet = new PlayerAction("ILLEGAL_BET", matchId, coinsAmount, null, null, currentPlayer.getPlayerId());
-                currentPlayer.setFirstIllegalOperation(illegalBet);
-                System.out.println("First illegal operation for Player " + currentPlayer.getPlayerId() + ": " + line);
-                return;  // Stop further processing for this player
+            if ("BET".equals(actionType)) {
+                if (currentPlayer.getBalance() < coinsAmount) {
+                    PlayerAction illegalBet = new PlayerAction("BET", matchId, coinsAmount, null, null, currentPlayer.getPlayerId());
+                    currentPlayer.setFirstIllegalOperation(illegalBet);
+                    return;
+                }
             }
 
             if ("DEPOSIT".equals(actionType) || "WITHDRAW".equals(actionType)) {
                 matchId = null;
-            } else if (data.length > 4 && !data[4].isEmpty()) {
-                // If there is a non-empty value after the fourth comma, set it as sideBetOn
+            } else if (!data[4].isEmpty()) {
                 sideBetOn = data[4].trim();
             }
 
@@ -101,6 +100,7 @@ public class DataFileReader {
                 currentPlayer.addAction(action);
             }
 
+            // Process BET action for legal bets
             if ("BET".equals(action.getAction())) {
                 if (matchId != null) {
                     Match currentMatch = findMatchById(matchId);
@@ -111,26 +111,20 @@ public class DataFileReader {
             }
 
         } catch (IllegalArgumentException e) {
-            System.err.println("Error processing line: " + line);
-            e.printStackTrace();
+            logger.error("An error occurred:", e);
         }
     }
 
 
     private void identifyFirstIllegalOperation(Player player) {
-        if (player.hasFirstIllegalOperation()) {
-            System.out.println("First illegal operation for Player " + player.getPlayerId() + ": " + player.getFirstIllegalOperation());
-        }
+        player.hasFirstIllegalOperation();
     }
 
     public void readAndProcessMatchData() {
         try (Stream<String> lines = Files.lines(Paths.get(filePath))) {
-            lines.forEach(line -> {
-                processMatchData(line);
-            });
-            System.out.println("Final matches list: " + matches);
+            lines.forEach(this::processMatchData);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("An error occurred:", e);
         }
     }
 
@@ -162,55 +156,46 @@ public class DataFileReader {
 
             return match;
         } catch (Exception e) {
-            System.err.println("Error creating Match object from line: " + line);
-            e.printStackTrace();
+            logger.error("Error creating Match object from line: " + line);
             return null;
         }
     }
 
     private void calculateWinnings(Player currentPlayer, Match match, PlayerAction bet) {
-            if (match.getMatchId().equals(bet.getMatchId())) {
-                if (!currentPlayer.hasFirstIllegalOperation()) {
-                    if ("DRAW".equalsIgnoreCase(match.getWinningSide())) {
-                        int coinsBet = bet.getCoinsAmount();
-                        currentPlayer.updateBalance(coinsBet);
-                        currentPlayer.incrementTotalMatches();
-                        return;
-                    }
-
-                    BigDecimal rate;
-                    switch (bet.getSideBetOn()) {
-                        case "A":
-                            rate = match.getRateValueA();
-                            break;
-                        case "B":
-                            rate = match.getRateValueB();
-                            break;
-                        case "DRAW":
-                            rate = new BigDecimal(1);
-                            break;
-                        default:
-                            throw new IllegalArgumentException("Invalid side bet: " + bet.getSideBetOn());
-                    }
-
-                    if (match.getWinningSide().equalsIgnoreCase(bet.getSideBetOn())) {
-                        int winnings = (int) (bet.getCoinsAmount() * rate.doubleValue());
-                        int totalWinnings = bet.getCoinsAmount() + winnings;
-                        currentPlayer.updateBalance(totalWinnings);
-                        casinoBalance -= winnings;
-                        currentPlayer.incrementWonMatches();
-
-                    } else {
-                        casinoBalance += bet.getCoinsAmount();
-                    }
-                } else {
-                    System.out.println("Illegitimate player detected: " + currentPlayer.getPlayerId());
+        if (match.getMatchId().equals(bet.getMatchId())) {
+            if (!currentPlayer.hasFirstIllegalOperation()) {
+                if ("DRAW".equalsIgnoreCase(match.getWinningSide())) {
+                    int coinsBet = bet.getCoinsAmount();
+                    currentPlayer.updateBalance(coinsBet);
+                    currentPlayer.incrementTotalMatches();
                     return;
-
                 }
-                currentPlayer.incrementTotalMatches();
+
+                BigDecimal rate = switch (bet.getSideBetOn()) {
+                    case "A" -> match.getRateValueA();
+                    case "B" -> match.getRateValueB();
+                    case "DRAW" -> new BigDecimal(1);
+                    default -> throw new IllegalArgumentException("Invalid side bet: " + bet.getSideBetOn());
+                };
+
+                if (match.getWinningSide().equalsIgnoreCase(bet.getSideBetOn())) {
+                    int winnings = (int) (bet.getCoinsAmount() * rate.doubleValue());
+                    int totalWinnings = bet.getCoinsAmount() + winnings;
+                    currentPlayer.updateBalance(totalWinnings);
+                    casinoBalance -= winnings;
+                    currentPlayer.incrementWonMatches();
+
+                } else {
+                    casinoBalance += bet.getCoinsAmount();
+                }
+            } else {
+                System.out.println("Illegitimate player detected: " + currentPlayer.getPlayerId());
+                return;
+
             }
+            currentPlayer.incrementTotalMatches();
         }
+    }
 
 
     private Match findMatchById(UUID matchId) {
@@ -224,65 +209,47 @@ public class DataFileReader {
         return null;
     }
 
-    public void identifyAndLogPlayerBalances() {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("results.txt"))) {
+    public void writeResultsToFile(String resultsFilePath) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(resultsFilePath))) {
             identifyAndLogLegitimatePlayers(writer);
             writer.newLine();
             identifyAndLogIllegitimatePlayers(writer);
             writer.newLine();
             logCasinoBalanceChanges(writer);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("An error occurred:", e);
+
         }
-        System.out.println("Results written to results.txt.");
     }
 
     private void identifyAndLogLegitimatePlayers(BufferedWriter writer) throws IOException {
-        System.out.println("Identifying and logging legitimate player balances...");
 
-        players.stream()
-                .filter(player -> !player.hasFirstIllegalOperation())
-                .sorted(Comparator.comparing(Player::getPlayerId))
-                .forEach(player -> {
-                    try {
-                        BigDecimal winRate = player.getWinRate();
-                        writer.write(player.getPlayerId() +
-                                " " + player.getBalance() +
-                                " " + winRate.setScale(2, BigDecimal.ROUND_HALF_UP));
-                        writer.newLine();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
+        players.stream().filter(player -> !player.hasFirstIllegalOperation()).sorted(Comparator.comparing(Player::getPlayerId)).forEach(player -> {
+            try {
+                BigDecimal winRate = player.getWinRate();
+                writer.write(player.getPlayerId() + " " + player.getBalance() + " " + winRate.setScale(2, RoundingMode.HALF_UP));
+                writer.newLine();
+            } catch (IOException e) {
+                logger.error("An error occurred:", e);
+            }
+        });
     }
 
     private void identifyAndLogIllegitimatePlayers(BufferedWriter writer) throws IOException {
-        System.out.println("Identifying and logging illegitimate players...");
 
-        players.stream()
-                .filter(Player::hasFirstIllegalOperation)
-                .sorted(Comparator.comparing(Player::getPlayerId))
-                .forEach(player -> {
-                    try {
-                        PlayerAction firstIllegalOperation = player.getFirstIllegalOperation();
-                        writer.write(player.getPlayerId() +
-                                " " + firstIllegalOperation.getAction() +
-                                " " + firstIllegalOperation.getMatchId() +
-                                " " + firstIllegalOperation.getCoinsAmount() +
-                                " " + firstIllegalOperation.getSideBetOn());
-                        writer.newLine();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
+        players.stream().filter(Player::hasFirstIllegalOperation).sorted(Comparator.comparing(Player::getPlayerId)).forEach(player -> {
+            try {
+                PlayerAction firstIllegalOperation = player.getFirstIllegalOperation();
+                writer.write(player.getPlayerId() + " " + firstIllegalOperation.getAction() + " " + firstIllegalOperation.getMatchId() + " " + firstIllegalOperation.getCoinsAmount() + " " + firstIllegalOperation.getSideBetOn());
+                writer.newLine();
+            } catch (IOException e) {
+                logger.error("An error occurred:", e);
+            }
+        });
     }
 
     private void logCasinoBalanceChanges(BufferedWriter writer) throws IOException {
-        System.out.println("Logging casino balance changes...");
-
         int casinoBalanceChange = getCasinoBalance();
-
-        writer.write("Casino Balance Change: " + casinoBalanceChange);
+        writer.write("" + casinoBalanceChange);
     }
-
 }

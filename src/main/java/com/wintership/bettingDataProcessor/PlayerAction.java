@@ -13,12 +13,12 @@ import java.util.UUID;
 @NoArgsConstructor
 public class PlayerAction {
     private UUID playerId;
-    private String action; // DEPOSIT, BET, WITHDRAW, etc.
-    private UUID matchId; // Nullable if action is not BET
-    private int coinsAmount; // Coin numbers for betting (int)
-    private String sideBetOn; // Nullable if action is not BET
+    private String action;
+    private UUID matchId;
+    private int coinsAmount;
+    private String sideBetOn;
     private List<Match> matches;
-    private String line; // Add a field to store the line information
+    private String line;
 
 
     public PlayerAction(String action, UUID matchId, int coinsAmount, String sideBetOn, List<Match> matches, UUID playerId) {
@@ -28,7 +28,7 @@ public class PlayerAction {
         this.sideBetOn = sideBetOn;
         this.matches = matches;
         this.playerId = playerId;
-        this.line = line; // Set the line information
+        this.line = line;
     }
 
 }

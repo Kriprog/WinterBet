@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
+import static com.wintership.bettingDataProcessor.DataFileReader.logger;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,7 +26,6 @@ public class Player {
     private boolean firstIllegalOperationDetected = false;
     @Getter
     private PlayerAction firstIllegalOperation;
-
 
 
     public boolean hasProcessedAction(PlayerAction action) {
@@ -52,24 +53,22 @@ public class Player {
                 case "DEPOSIT":
                     balance += action.getCoinsAmount();
                     break;
-                case "BET":
-                    balance -= action.getCoinsAmount();
-                    break;
-                case "WITHDRAW":
+                case "BET", "WITHDRAW":
                     balance -= action.getCoinsAmount();
                     break;
             }
         } catch (Exception e) {
-            System.err.println("Error updating balance: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Error updating balance: " + e.getMessage());
         }
     }
-    public void setFirstIllegalOperation(PlayerAction  operationDetails) {
+
+    public void setFirstIllegalOperation(PlayerAction operationDetails) {
         if (!firstIllegalOperationDetected) {
             this.firstIllegalOperation = operationDetails;
             this.firstIllegalOperationDetected = true;
         }
     }
+
     public boolean hasFirstIllegalOperation() {
         return firstIllegalOperationDetected;
     }
@@ -77,6 +76,7 @@ public class Player {
     public void incrementWonMatches() {
         wonMatches++;
     }
+
     public void incrementTotalMatches() {
         totalMatches++;
     }
@@ -85,8 +85,7 @@ public class Player {
         if (totalMatches == 0) {
             return BigDecimal.ZERO;
         }
-        BigDecimal winRate = new BigDecimal(wonMatches)
-                .divide(new BigDecimal(totalMatches), 4, RoundingMode.HALF_UP);
+        BigDecimal winRate = new BigDecimal(wonMatches).divide(new BigDecimal(totalMatches), 4, RoundingMode.HALF_UP);
 
         return winRate.setScale(2, RoundingMode.HALF_UP);
     }
