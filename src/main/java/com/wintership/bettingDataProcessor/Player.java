@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Getter
@@ -17,6 +19,12 @@ public class Player {
     private long balance;
     private List<PlayerAction> actions;
     private Set<PlayerAction> processedActions = new HashSet<>();
+    private int wonMatches = 0;
+    private int totalMatches = 0;
+    private boolean firstIllegalOperationDetected = false;
+    @Getter
+    private PlayerAction firstIllegalOperation;
+
 
 
     public boolean hasProcessedAction(PlayerAction action) {
@@ -25,7 +33,7 @@ public class Player {
 
     public Player(UUID playerId) {
         this.playerId = playerId;
-        this.balance = 0; // Assuming the balance starts at 0
+        this.balance = 0;
         this.actions = new ArrayList<>();
     }
 
@@ -35,15 +43,11 @@ public class Player {
     }
 
     public void updateBalance(long amount) {
-        System.out.println("Before update long: " + balance);
         balance += amount;
-        System.out.println("After update long: " + balance);
-
     }
 
     public void updateBalance(PlayerAction action) {
         try {
-            System.out.println("Before updateBalanceAction: " + balance);
             switch (action.getAction()) {
                 case "DEPOSIT":
                     balance += action.getCoinsAmount();
@@ -55,23 +59,36 @@ public class Player {
                     balance -= action.getCoinsAmount();
                     break;
             }
-            System.out.println("After updateBalanceAction: " + balance);
         } catch (Exception e) {
             System.err.println("Error updating balance: " + e.getMessage());
             e.printStackTrace();
         }
     }
-
+    public void setFirstIllegalOperation(PlayerAction  operationDetails) {
+        if (!firstIllegalOperationDetected) {
+            this.firstIllegalOperation = operationDetails;
+            this.firstIllegalOperationDetected = true;
+        }
+    }
     public boolean hasFirstIllegalOperation() {
-        // Implement this method to check if there's any illegal operation
-        // For example, check if the balance goes negative during a withdrawal
-        return false;
+        return firstIllegalOperationDetected;
     }
 
-    public String getFirstIllegalOperation() {
-        // Implement this method to return details of the first illegal operation
-        return null;
+    public void incrementWonMatches() {
+        wonMatches++;
+    }
+    public void incrementTotalMatches() {
+        totalMatches++;
     }
 
+    public BigDecimal getWinRate() {
+        if (totalMatches == 0) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal winRate = new BigDecimal(wonMatches)
+                .divide(new BigDecimal(totalMatches), 4, RoundingMode.HALF_UP);
+
+        return winRate.setScale(2, RoundingMode.HALF_UP);
+    }
 
 }

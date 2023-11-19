@@ -18,6 +18,8 @@ public class PlayerAction {
     private int coinsAmount; // Coin numbers for betting (int)
     private String sideBetOn; // Nullable if action is not BET
     private List<Match> matches;
+    private String line; // Add a field to store the line information
+
 
     public PlayerAction(String action, UUID matchId, int coinsAmount, String sideBetOn, List<Match> matches, UUID playerId) {
         this.action = action;
@@ -26,6 +28,7 @@ public class PlayerAction {
         this.sideBetOn = sideBetOn;
         this.matches = matches;
         this.playerId = playerId;
+        this.line = line; // Set the line information
     }
 
 }
