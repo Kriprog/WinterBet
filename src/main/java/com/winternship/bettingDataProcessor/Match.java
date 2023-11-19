@@ -1,4 +1,4 @@
-package com.wintership.bettingDataProcessor;
+package com.winternship.bettingDataProcessor;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
